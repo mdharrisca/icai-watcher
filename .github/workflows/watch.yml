@@ -1,0 +1,45 @@
+name: ICAI seat watcher
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"      # every 5 minutes (GitHub may delay it a few minutes)
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test phone alert instead of checking"
+        type: boolean
+        default: false
+
+concurrency:
+  group: icai-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: playwright install --with-deps chromium
+
+      - name: Check seats
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        # Change CHENNAI / MCS here. Several centres: --pou "CHENNAI,COIMBATORE". Advanced ITT: --course ITT
+        run: python icai_batch_watcher.py ${{ inputs.test && '--test' || '--once' }} --pou "CHENNAI" --course MCS
+
+      - name: Keep screenshots if something went wrong
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug
+          path: "*.png"
+          if-no-files-found: ignore
