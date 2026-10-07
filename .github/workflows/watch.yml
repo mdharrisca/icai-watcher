@@ -2,7 +2,7 @@ name: ICAI seat watcher
 
 on:
   schedule:
-    - cron: "*/5 * * * *"      # every 5 minutes (GitHub may delay it a few minutes)
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       test:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
@@ -33,8 +33,10 @@ jobs:
       - name: Check seats
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        # Change CHENNAI / MCS here. Several centres: --pou "CHENNAI,COIMBATORE". Advanced ITT: --course ITT
-        run: python icai_batch_watcher.py ${{ inputs.test && '--test' || '--once' }} --pou "CHENNAI" --course MCS
+        run: |
+          python icai_batch_watcher.py ${{ inputs.test && '--test' || '--once' }} --region Southern --pou "CHENNAI,Chengalpattu,BENGALURU" --course "MCS Course"
+          python icai_batch_watcher.py --once --region Southern --pou "CHENNAI,Chengalpattu,BENGALURU" --course "MCS Course - Weekend"
+          python icai_batch_watcher.py --once --region Southern --pou "CHENNAI,Chengalpattu,BENGALURU" --course "Advanced Information Technology"
 
       - name: Keep screenshots if something went wrong
         if: always()
